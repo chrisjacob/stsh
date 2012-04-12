@@ -36,7 +36,7 @@ sharejs.server.attach app,
 
 
 app.get /^\/([a-zA-Z0-9]{6})\/(.*)$/, (req, res) ->
-  res.local "raw_url", "/raw" + req.url
+  res.local "raw_url", "http://run.plnkr.co/raw" + req.url
   res.local "plunk_id", req.params[0]
   res.render "preview"
   
