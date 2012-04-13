@@ -1,15 +1,16 @@
+coffee = require("coffee-script")
 express = require("express")
 _ = require("underscore")._
 
 
 app = module.exports = express.createServer()
 
-config = _.defaults require("../../config"),
+config = _.defaults require("../config"),
   store: "memory"
   ttl: 60 * 60 * 24 * 2 # 2 days
 
 app.configure ->
-  app.use require("../../lib/plunker").middleware(config)
+  app.use require("../lib/plunker").middleware(config)
 
   app.use express.methodOverride()
   app.use express.bodyParser()
@@ -29,7 +30,7 @@ apiError = (res, err) ->
   if err.message then body.message = err.message
   if err.errors then body.errors = err.errors
   if err.stack then body.stack = err.stack
-  
+
   delete body.statusCode
 
   res.json(body, err.statusCode or 500)
@@ -64,10 +65,10 @@ app.get "/plunks", (req, res) ->
   # Pagination
   page = parseInt(req.param("page", 1), 10) or 1
   size = parseInt(req.param("per_page", 8), 10) or 8
-  
+
   page = Math.max(page, 1)
   size = Math.min(Math.max(size, 1), 8)
-  
+
   req.plunker.index (page - 1) * size, page * size, (err, plunks, meta) ->
     if err then return apiError(res, err)
     else
@@ -76,17 +77,17 @@ app.get "/plunks", (req, res) ->
         # TODO: WTF Express, why are all cookies lowercase?
         unless req.cookies[plunk.id.toLowerCase()] == plunk.token
           delete plunk.token
-      
+
       last = parseInt(meta.count / size, 10) + 1
-      
+
       link = []
       if meta.count > page * size
-        link.push "<#{req.plunker.config.url}/api/v1/plunks?page=#{page+1}&per_page=#{size}>; rel=\"next\""
-        link.push "<#{req.plunker.config.url}/api/v1/plunks?page=#{last}&per_page=#{size}>; rel=\"last\""
+        link.push "<#{req.plunker.config.api}/plunks?page=#{page+1}&per_page=#{size}>; rel=\"next\""
+        link.push "<#{req.plunker.config.api}/plunks?page=#{last}&per_page=#{size}>; rel=\"last\""
       if page > 1
-        link.push "<#{req.plunker.config.url}/api/v1/plunks?page=#{Math.min(last, page-1)}&per_page=#{size}>; rel=\"prev\""
-        link.push "<#{req.plunker.config.url}/api/v1/plunks?page=1&per_page=#{size}>; rel=\"first\""
-      
+        link.push "<#{req.plunker.config.api}/plunks?page=#{Math.min(last, page-1)}&per_page=#{size}>; rel=\"prev\""
+        link.push "<#{req.plunker.config.api}/plunks?page=1&per_page=#{size}>; rel=\"first\""
+
       res.header("Link", link.join(", ")) if link.length
       res.json(plunks, 200)
 
@@ -97,7 +98,7 @@ app.post "/plunks", (req, res) ->
     else
       expiry = plunk.expires or +new Date() + 1000 * 60 * 60 * 24 * 365 # 1 year
 
-      res.cookie plunk.id, plunk.token, { expires: new Date(expiry), httpOnly: true, path: "/api/v1/" }
+      res.cookie plunk.id, plunk.token, { expires: new Date(expiry), httpOnly: true, path: "/plunks/" }
       res.json(plunk, 201) # Created
 
 # Read
@@ -122,8 +123,8 @@ app.post "/plunks/:id", fetchPlunk, checkToken, (req, res) ->
       if err then return apiError(res, err)
       else
         expiry = plunk.expires or +new Date() + 1000 * 60 * 60 * 24 * 365 # 1 year
-  
-        res.cookie plunk.id, plunk.token, { expires: new Date(expiry), httpOnly: true, path: "/api/v1/" }
+
+        res.cookie plunk.id, plunk.token, { expires: new Date(expiry), httpOnly: true, path: "/plunks/" }
         res.json(plunk, 200)
 
 # Delete
@@ -135,7 +136,7 @@ app.del "/plunks/:id", fetchPlunk, checkToken, (req, res) ->
     req.plunker.remove req.params.id, (err) ->
       if err then return apiError(res, err)
       else
-        res.clearCookie req.params.id, { path: "/api/v1/plunks" }
+        res.clearCookie req.params.id, { path: "/plunks" }
         res.send(204) # No content
 
 if require.main == module

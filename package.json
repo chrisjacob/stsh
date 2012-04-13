@@ -1,14 +1,19 @@
 {
-  "name": "plunker",
-  "subdomain": "plnkr.co",
+  "name": "plnkr",
+  "subdomain": "plnkr",
   "domains": [
     "plnkr.co",
-    "run.plnkr.co"
+    "run.plnkr.co",
+    "api.plnkr.co",
+    "edit.plnkr.co"
   ],
   "scripts": {
     "start": "server.js"
   },
-  "version": "0.1.3",
+  "engines": {
+    "node": "0.6.x"
+  },
+  "version": "0.1.3-12",
   "private": true,
   "dependencies": {
     "coffee-script": "1.2.x",

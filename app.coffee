@@ -2,17 +2,17 @@ coffee = require("coffee-script")
 express = require("express")
 gzippo = require("gzippo")
 assets = require("connect-assets")
-sharejs = require("share")
 
 app = module.exports = express.createServer()
 
 app.use assets()
 app.use gzippo.staticGzip("#{__dirname}/public")
-#app.use gzippo.compress() # To be put back in when it has better caching support
 app.use express.static("#{__dirname}/public")
+app.use express.logger()
 
-app.use "/api/v1", require("./servers/api/v1")
-app.use "/raw", require("./servers/plunks")
+app.use express.vhost "api.plnkr.co", require("./servers/api")
+app.use express.vhost "raw.plnkr.co", require("./servers/raw")
+app.use express.vhost "edit.plnkr.co", require("./servers/edit")
 
 app.set "views", "#{__dirname}/views"
 app.set "view engine", "jade"
@@ -29,24 +29,13 @@ app.get "/about", (req, res) ->
   res.render("about", page: "/about")
 
 
-# Start the sharejs server before variable routes
-sharejs.server.attach app,
-  db:
-    type: "none"
-
 
 app.get /^\/([a-zA-Z0-9]{6})\/(.*)$/, (req, res) ->
-  res.local "raw_url", "http://run.plnkr.co/raw" + req.url
+  res.local "raw_url", "http://raw.plnkr.co/" + req.url
   res.local "plunk_id", req.params[0]
   res.render "preview"
-  
+
 app.get /^\/([a-zA-Z0-9]{6})$/, (req, res) -> res.redirect("/#{req.params[0]}/", 301)
-
-
-app.get /^\/edit(?:\/([a-zA-Z0-9]{6})\/?)?/, (req, res) ->
-  res.render("editor", page: "/edit", views: req.param("views", "sidebar editor preview").split(/[ \.,]/).join(" "))
-
-app.use express.logger()
 
 if require.main == module
   app.listen process.env.PORT || 8080

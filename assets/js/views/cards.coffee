@@ -4,15 +4,15 @@
       @model.on "change", @render
       @model.on "sync", @flash("Updated")
       @model.on "error", @flash("Error", "warning")
-    
+
     events:
       "click .delete": "handleDelete"
       "click .refresh": "handleRefresh"
-    
+
     tagName: "li"
     className: "span3 plunk"
 
-    template: """
+    template: Handlebars.compile """
       <div class="thumbnail">
         <h5 class="description" title="{{description}}">{{description}}</h5>
         <a href="{{html_url}}">
@@ -48,51 +48,50 @@
               {{else}}
                 <a class="btn btn-mini btn-primary edit" title="Fork and edit in Plunker" href="/edit/{{id}}">
                   <i class="icon-pencil icon-white"></i>
-                </a>              
+                </a>
               {{/if}}
             </div>
           </div>
       </div>
     """
-    
+
     render: =>
-      compiled = Handlebars.compile(@template)
-      @$el.html $(compiled(@model.toJSON()))
+      @$el.html @template(@model.toViewModel())
       @$(".timeago").timeago()
       @$("img.lazy").lazyload()
       @
-    
+
     flash: (message, type = "success") =>
       self = @
       ->
         $tag = $("<span>#{message}</span>").addClass("label label-#{type}")
         self.$(".caption p").prepend($tag)
-        
+
         setTimeout((-> $tag.fadeOut()), 3000)
 
-    
+
     handleDelete: ->
       @model.destroy() if confirm "Are you sure that you would like to delete this plunk?"
-    
+
     handleRefresh: ->
-      unless @model.get("source")?.url then alert "Unable to refresh a plunk without a source" 
+      unless @model.get("source")?.url then alert "Unable to refresh a plunk without a source"
       else if confirm "Are you sure that you would like to refresh this plunk from its source?"
         self = @
         source = @model.get("source").url
-        
+
         for name, matcher of plunker.importers
           if matcher.test(source)
             strategy = matcher
             break
-        
+
         if strategy then strategy.import source, (error, json) ->
           if error then alert error
-          else            
+          else
             # Remove fields that can not be updated
             delete json.source
             delete json.author
-            
-            
+
+
             self.model.set json # Need to break this into two operations.. thanks Backbone silent: true on wait: true saves
             unless _.isEmpty(self.model.changes)
               self.model.save {},
@@ -101,7 +100,7 @@
             else self.flash("No changes", "warning")()
 
   class Page extends Backbone.Model
-  
+
   class Pager extends Backbone.View
     template: Handlebars.compile """
       {{#if prev}}
@@ -113,19 +112,19 @@
         <li class="next">
           <a href="{{next}}">Older &rarr;</a>
         </li>
-      {{/if}}      
+      {{/if}}
     """
-    
+
     events:
       "click .next a":      -> @trigger "intent:next", arguments...
       "click .previous a":  -> @trigger "intent:prev", arguments...
-    
+
     initialize: ->
       @model.on "change reset", @render
-    
+
     render: =>
       @$el.html @template(@model.toJSON())
-      @    
+      @
 
   class plunker.RecentPlunks extends Backbone.View
     initialize: ->
@@ -136,25 +135,25 @@
       @pager = new Pager
         el: document.getElementById("pager")
         model: @page
-      
+
       @pager.on "intent:next intent:prev", (e) ->
         e.preventDefault()
         self.collection.url = $(e.target).attr("href")
         self.collection.fetch()
-      
+
       @collection.parse = _.wrap @collection.parse, (parse, json, xhr) ->
         self.page.clear()
-        
+
         if link = xhr.getResponseHeader("Link")
           page = {}
-          
+
           link.replace /<([^>]+)>;\s*rel="(next|prev|first|last)"/gi, (match, href, rel) ->
             page[rel] = href
-          
+
           self.page.set(page)
 
         parse(json)
-      
+
       self.cards = {}
       @collection.on "reset", (coll) ->
         self.removeCard({id: id}, coll) for id, card of self.cards
@@ -164,7 +163,7 @@
 
     addCard: (plunk, coll, index) =>
       return unless plunk
-      
+
       card = new plunker.Card(model: plunk)
 
       if index
@@ -175,10 +174,10 @@
       @$el.children().slice(@size).remove()
 
       @cards[plunk.id] = card
-      
+
     removeCard: (plunk, coll) =>
       self = @
-      
+
       card = @cards[plunk.id]
       card.$el.fadeOut "slow", ->
         card.remove()
